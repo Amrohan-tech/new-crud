@@ -11,9 +11,15 @@ Route::get('/user', function (Request $request) {
 Route::apiResource('blogs', BlogController::class);
 
 // SoftDelete routes
+
+
+Route::post('insert', [BlogController::class, 'store']);
+
 Route::get('blogs/trashed', [BlogController::class, 'trashed']);
 Route::post('blogs/restore/{id}', [BlogController::class, 'restore']);
 Route::delete('blogs/force-delete/{id}', [BlogController::class, 'forceDelete']);
+
+Route::get('users/{id}/blog', [BlogController::class, 'getUserBlog']);
 
 
 

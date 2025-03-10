@@ -8,11 +8,13 @@ class BlogController extends Controller
 {
     public function index()
     {
+       
         return response()->json(Blog::all(), 200);
     }
 
     public function store(Request $request)
     {
+        dd("jhsjhdj");
         $request->validate([
             'name' => 'required',
             'salary' => 'required|numeric',
@@ -26,7 +28,7 @@ class BlogController extends Controller
 
     public function show(Blog $blog)
     {
-        return response()->json($blog, 200);
+        return response()->json($blog->load('detail'), 200);
     }
 
     public function update(Request $request, Blog $blog)
@@ -34,22 +36,40 @@ class BlogController extends Controller
         $request->validate([
             'name' => 'required',
             'salary' => 'required|numeric',
-            'job' => 'required'
+            'job' => 'required',
+            'description' => 'nullable|string',
+            'category' => 'nullable|string'
         ]);
 
-        $blog->update($request->all());
+        $blog->update($request->only(['name', 'salary', 'job']));
 
-        return response()->json(['message' => 'Blog updated successfully', 'blog' => $blog], 200);
+        if ($blog->detail) {
+            $blog->detail()->update([
+                'description' => $request->description,
+                'category' => $request->category
+            ]);
+        } else {
+            $blog->detail()->create([
+                'description' => $request->description,
+                'category' => $request->category
+            ]);
+        }
+
+        return response()->json(['message' => 'Blog updated successfully', 'blog' => $blog->load('detail')], 200);
     }
+
 
     public function destroy(Blog $blog)
     {
-        $blog->delete();
+        $blog->detail()->delete(); // Soft delete BlogDetail
+        $blog->delete(); // Soft delete Blog
         return response()->json(['message' => 'Blog deleted successfully'], 200);
     }
 
+
     public function trashed()
     {
+        dd("jj");
         return response()->json(Blog::onlyTrashed()->get(), 200);
     }
 
@@ -57,14 +77,30 @@ class BlogController extends Controller
     {
         $blog = Blog::onlyTrashed()->findOrFail($id);
         $blog->restore();
-        return response()->json(['message' => 'Blog restored successfully', 'blog' => $blog], 200);
+
+        if ($blog->detail()->onlyTrashed()->exists()) {
+            $blog->detail()->restore();
+        }
+
+        return response()->json(['message' => 'Blog restored successfully', 'blog' => $blog->load('detail')], 200);
     }
 
+
     public function forceDelete($id)
-    {
+    {   
         $blog = Blog::onlyTrashed()->findOrFail($id);
+    
+        if ($blog->detail()->onlyTrashed()->exists()) {
+            $blog->detail()->forceDelete();
+        }
+
         $blog->forceDelete();
         return response()->json(['message' => 'Blog permanently deleted'], 200);
     }
-}
+    public function getUserBlog($userId)
+    {
+        $user = User::with('blog')->findOrFail($userId);
+        return response()->json($user, 200);
+    }
 
+}
